@@ -1,23 +1,15 @@
-#include <iostream>
-#include <fstream>
 #include <cmath>
 #include <cstdlib>
 #include "complex.h"
 #include <fftw3.h>
 
-using namespace std;
-
 double randNormal(const double, const double);
-
 double f(int x, int y);
 
-int main()
+void generate_random_field(int n, double* map_, int &error)
 {
   int x0, y0, x;
-  int n, ii, idx;
-  cout << "Input grid size" << endl;
-  cin >> n;
-  cout << "Grid area set to " << n << " X " << n << endl;
+  int ii, idx;
   int M = 2*n-1;
   int N = M*M;
   double **row, **col, **Rows, **Cols;
@@ -40,11 +32,11 @@ int main()
  
   fftw_complex Z;//, a;
   double a;
-  double map_[n][n];
   // FOR FFT
   fftw_plan p;
   fftw_complex *G, *Gamma, *GammaZ, *F;
 
+  error = 0;
   
   // Span n^2*n^2 covariance matrix to gather
   // first rows and columns of each n*n Toeplitz matrix
@@ -80,6 +72,8 @@ int main()
 	      col[RIdx][j] = Rows[RIdx][n-ii];
 	    }
     }
+  delete[] Rows; delete[] Cols;
+
   //Now pad the row with the two (M) long rows of last circulant blocks.
   // These are transp(C_n),...,transp(C_2)
   // row of transp(C) == column of C
@@ -93,9 +87,6 @@ int main()
 	}
     }
 
-  // ------- VALIDATED UP TO HERE -------------
-
-
   G = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*M*M);
   Gamma = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*M*M);
   p = fftw_plan_dft_2d(M, M, G, Gamma, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -107,13 +98,12 @@ int main()
       for (int j=0;j<M;j++)
   	{
 	  idx = j + RIdx*M;
-	  //idx = RIdx + j*M;
-
 	  G[idx] = row[RIdx][j]/N;
 	  // ONE VERIFIES THAT G IS (2*n-1)*(2*n-1) long. OK.
 	  // DIVIDES DIRECTLY BY SIZE OF VECTOR (2*n-1)X(2*n-1)
   	}
     }
+    delete[] col; delete[] row;
 
 
   // Compute eigen values and free G to save memory
@@ -143,8 +133,8 @@ int main()
 	{
 	  if(abs(a) > 1e-15)
 	    {
-	      cout << "Could not find positive definite circulant embedding" << endl;
-	      exit(EXIT_FAILURE);
+	      //Could not find positive definite circulant embedding
+	      error = 1;
 	    }
 	  else
 	    {
@@ -167,43 +157,12 @@ int main()
     {
       for (int j=0;j<n;j++)
 	{
-	  idx = j+M*i;  // Stride is M and not n !
+	  idx = j+M*i;
+	  // Stride is M and not n !
 	  //idx = i + n*j;
-	  map_[i][j] = creal(F[idx]);
+	  map_[j+n*i] = creal(F[idx]);
 	}
     }
+  fftw_free(F);
 
-  //WRITE NOISE MAP ON FILE MATRIX.DAT TO BE READ WITH GNUPLOT (IMAGE MODE)
-  ofstream result("result_matrix.dat");
-  for(int i=0;i<n;i++)
-    {
-      for(int j=0;j<n;j++)
-	{
-	  result << map_[i][j] << " ";
-	}
-      result << endl;
-    }
-
-   result.close();
-   system("gnuplot plot_RF.gnu");
-}
-
-double randNormal(const double mean_, const double sigma_)
-{
-  /* Return a random number sampled in N(mean_, sigma_).
-     Box-Muller method.
-  */
-
-  double x1, x2, w;
-  do {
-    x1 = 2.0 * (rand () / double (RAND_MAX)) - 1.0;
-    x2 = 2.0 * (rand () / double (RAND_MAX)) - 1.0;
-    w = x1 * x1 + x2 * x2;
-  } while (w >= 1.0);
-
-  w = sqrt (-2.0 * log (w)/w);
-  const double y1 = x1 * w;
-  const double y2 = x2 * w;
-
-  return mean_ + y1 * sigma_;
-}
+ }
