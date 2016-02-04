@@ -19,7 +19,8 @@ int main()
   int N = M*M;
   double Rows[n][n]; double Cols[n][n];
   double row[M][M]; double col[n][M];
-  fftw_complex map_[n][n], Z, a; 
+  fftw_complex Z, a;
+  double map_[n][n];
 				
   // FOR FFT
   fftw_plan p;
@@ -137,9 +138,20 @@ int main()
 	  map_[i][j] = creal(F[idx]);
 	}
     }
-	  
-  
-  
+
+  //WRITE NOISE MAP ON FILE MATRIX.DAT TO BE READ WITH GNUPLOT (IMAGE MODE)
+  ofstream result("result_matrix.dat");
+  for(int i=0;i<n;i++)
+    {
+      for(int j=0;j<n;j++)
+	{
+	  idx = j+n*i;
+	  result << map_[i][j] << " ";
+	}
+      result << endl;
+    }
+
+   result.close();
 }
 
 double f(int x, int y)
