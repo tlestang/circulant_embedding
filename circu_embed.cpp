@@ -14,13 +14,13 @@ double f(int x, int y);
 int main()
 {
   int x0, y0, x;
-  int n=384, ii, idx;
+  int n, ii, idx;
+  cout << "Input grid size" << endl;
+  cin >> n;
+  cout << "Grid area set to " << n << " X " << n << endl;
   int M = 2*n-1;
   int N = M*M;
-  double stackRq;
   double **row, **col, **Rows, **Cols;
-  stackRq = ((2*n*n + M*M + n*M)*8.0)/1e3;
-  cout << "Requires " << stackRq << " kB in stack " << endl;
   row = new double*[M]; col = new double*[n];
   Rows = new double*[n]; Cols = new double*[n];
   for (int i=0;i<M;i++)
@@ -185,27 +185,7 @@ int main()
     }
 
    result.close();
-}
-
-double f(int x, int y)
-{
-  double h1, h2, a, b, c, e;
-  h1 = (double)x;
-  h2 = (double)y;
-  a = (h1*h1)/(50*50);
-  b = (h1*h2)/(50*15);
-  c = (h2*h2)/(15*15);
-
-  e = exp(-a-c);
-  return (1.0-a-b-c)*e;
-
-  // double d, a;
-  // double sigma = 5.0;
-  // d = x*x + y*y;
-  // a = exp(-d/(2*sigma*sigma));
-  // return a;
-	  
-
+   system("gnuplot plot_RF.gnu");
 }
 
 double randNormal(const double mean_, const double sigma_)
