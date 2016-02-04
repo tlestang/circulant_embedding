@@ -15,8 +15,8 @@ int main()
 {
   int x0, y0, x;
   int n=3, ii, idx;
-  int M = M;
-  int N = (M)*(M);
+  int M = 2*n-1;
+  int N = M*M;
   double Rows[n][n]; double Cols[n][n];
   double row[M][M]; double col[n][M];
   fftw_complex map_[n][n], Z, a; 
@@ -75,10 +75,10 @@ int main()
 
   // ------- VALIDATED UP TO HERE -------------
 
-  
-  G = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*n*n);
-  Gamma = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*n*n);
-  p = fftw_plan_dft_2d(N, N, G, Gamma, FFTW_FORWARD, FFTW_ESTIMATE);
+
+  G = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*M*M);
+  Gamma = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*M*M);
+  p = fftw_plan_dft_2d(M, M, G, Gamma, FFTW_FORWARD, FFTW_ESTIMATE);
 
 
   // CREATE VECTOR G PRIOR TO FFT.
@@ -94,30 +94,38 @@ int main()
   	}
     }
 
+
   // Compute eigen values and free G to save memory
+
   fftw_execute(p);
+
   fftw_free(G);
   // Clear plan
   fftw_destroy_plan(p);
   
   //CREATE NEW PLAN FOR NEXT FFT
-   p = fftw_plan_dft_2d(N, N, GammaZ, F, FFTW_FORWARD, FFTW_ESTIMATE);
-   //ALLOCATE GAMMAZ
-   GammaZ = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N);
+
+  GammaZ = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N);
+  F = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N);
+  p = fftw_plan_dft_2d(M, M, GammaZ, F, FFTW_FORWARD, FFTW_ESTIMATE);
+  //ALLOCATE GAMMAZ
+  
   // COMPUTE DOT PRODUCT BETWENN SQRT(GAMMA)
   // AND GAUSSIAN IMAGINARY RAND. VECTOR Z.
+  
   for(int i=0;i<N;i++)
     {
       a = csqrt(Gamma[i]);
       Z = randNormal(0,1) + randNormal(0,1)*I;
       GammaZ[i] = a*Z;
     }
+
+
   //CLEAR GAMMA, ALLOCATE F AND DO FFT TO GET F
   fftw_free(Gamma);
-  F = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N);
   fftw_execute(p);
-  // CLEAR GAMMA AND FFT PLAN
-  fftw_free(Gamma); fftw_destroy_plan(p);
+  // CLEAR GAMMAZ AND FFT PLAN
+  fftw_free(GammaZ); fftw_destroy_plan(p);
   
 
   //EXTRACT SUB BLOCK
@@ -126,7 +134,7 @@ int main()
       for (int j=0;j<n;j++)
 	{
 	  idx = j+n*i;
-	  map_[i][j] = F[idx];
+	  map_[i][j] = creal(F[idx]);
 	}
     }
 	  
