@@ -139,7 +139,18 @@ int main()
       //a = csqrt(Gamma[i]);
       //cout << creal(Gamma[i]) << endl;
       a = creal(Gamma[i]);
-      if(a<0){a=0.0;}
+      if(a<0)
+	{
+	  if(abs(a) > 1e-15)
+	    {
+	      cout << "Could not find positive definite circulant embedding" << endl;
+	      exit(EXIT_FAILURE);
+	    }
+	  else
+	    {
+	      a = 0.0;
+	    }
+	}
       Z = randNormal(0,1) + randNormal(0,1)*I;
       GammaZ[i] = sqrt(a)*Z;
     }
@@ -156,7 +167,7 @@ int main()
     {
       for (int j=0;j<n;j++)
 	{
-	  idx = j+M*i;
+	  idx = j+M*i;  // Stride is M and not n !
 	  //idx = i + n*j;
 	  map_[i][j] = creal(F[idx]);
 	}
@@ -168,7 +179,7 @@ int main()
     {
       for(int j=0;j<n;j++)
 	{
-	  result << map_[j][i] << " ";
+	  result << map_[i][j] << " ";
 	}
       result << endl;
     }
