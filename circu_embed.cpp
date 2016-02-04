@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include "complex.h"
-//#include <fftw3.h>
+#include <fftw3.h>
 
 using namespace std;
 
@@ -14,9 +14,18 @@ double f(int x, int y);
 int main()
 {
   int x0, y0, x;
-  int n=3, ii;
+  int n=3, ii, idx;
+  int M = M;
+  int N = (M)*(M);
   double Rows[n][n]; double Cols[n][n];
-  double row[2*n-1][2*n-1]; double col[n][2*n-1];
+  double row[M][M]; double col[n][M];
+  fftw_complex map_[n][n], Z, a; 
+				
+  // FOR FFT
+  fftw_plan p;
+  fftw_complex *G, *Gamma, *GammaZ, *F;
+
+  
   // Span n^2*n^2 covariance matrix to gather
   // first rows and columns of each n*n Toeplitz matrix
   x0 = y0 = 0;
@@ -44,36 +53,85 @@ int main()
 	    }
 	  // Adds the additional elements to make the matrix circulant
 	  ii = 0;
-	  for(int j=n;j<2*n-1;j++)
+	  for(int j=n;j<M;j++)
 	    {
 	      ii++;
 	      row[RIdx][j] = Cols[RIdx][n-ii];
 	      col[RIdx][j] = Rows[RIdx][n-ii];
 	    }
     }
-  //Now pad the row with the two (2*n-1) long rows of last circulant blocks.
+  //Now pad the row with the two (M) long rows of last circulant blocks.
   // These are transp(C_n),...,transp(C_2)
   // row of transp(C) == column of C
   ii=0;
-  for(int RIdx=n;RIdx<2*n-1;RIdx++)
+  for(int RIdx=n;RIdx<M;RIdx++)
     {
       ii++;
-      for(int j=0;j<2*n-1;j++)
+      for(int j=0;j<M;j++)
 	{
 	  row[RIdx][j] = col[n-ii][j];
 	}
     }
-  for(int RIdx=0;RIdx<2*n-1;RIdx++)
+
+  // ------- VALIDATED UP TO HERE -------------
+
+  
+  G = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*n*n);
+  Gamma = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*n*n);
+  p = fftw_plan_dft_2d(N, N, G, Gamma, FFTW_FORWARD, FFTW_ESTIMATE);
+
+
+  // CREATE VECTOR G PRIOR TO FFT.
+  for(int RIdx=0;RIdx<M;RIdx++)
     {
-      cout << "---------" << endl;
-      for (int j=0;j<2*n-1;j++)
+      for (int j=0;j<M;j++)
   	{
-  	  cout << row[RIdx][j] << endl;
+	  idx = j + RIdx*M;
+
+	  G[idx] = row[RIdx][j]/N;
+	  // ONE VERIFIES THAT G IS (2*n-1)*(2*n-1) long. OK.
+	  // DIVIDES DIRECTLY BY SIZE OF VECTOR (2*n-1)X(2*n-1)
   	}
     }
 
-  // Compute eigen values
-  ... WIP
+  // Compute eigen values and free G to save memory
+  fftw_execute(p);
+  fftw_free(G);
+  // Clear plan
+  fftw_destroy_plan(p);
+  
+  //CREATE NEW PLAN FOR NEXT FFT
+   p = fftw_plan_dft_2d(N, N, GammaZ, F, FFTW_FORWARD, FFTW_ESTIMATE);
+   //ALLOCATE GAMMAZ
+   GammaZ = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N);
+  // COMPUTE DOT PRODUCT BETWENN SQRT(GAMMA)
+  // AND GAUSSIAN IMAGINARY RAND. VECTOR Z.
+  for(int i=0;i<N;i++)
+    {
+      a = csqrt(Gamma[i]);
+      Z = randNormal(0,1) + randNormal(0,1)*I;
+      GammaZ[i] = a*Z;
+    }
+  //CLEAR GAMMA, ALLOCATE F AND DO FFT TO GET F
+  fftw_free(Gamma);
+  F = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N);
+  fftw_execute(p);
+  // CLEAR GAMMA AND FFT PLAN
+  fftw_free(Gamma); fftw_destroy_plan(p);
+  
+
+  //EXTRACT SUB BLOCK
+  for (int i=0;i<n;i++)
+    {
+      for (int j=0;j<n;j++)
+	{
+	  idx = j+n*i;
+	  map_[i][j] = F[idx];
+	}
+    }
+	  
+  
+  
 }
 
 double f(int x, int y)
@@ -90,4 +148,23 @@ double f(int x, int y)
 	  
 
 }
-  
+
+double randNormal(const double mean_, const double sigma_)
+{
+  /* Return a random number sampled in N(mean_, sigma_).
+     Box-Muller method.
+  */
+
+  double x1, x2, w;
+  do {
+    x1 = 2.0 * (rand () / double (RAND_MAX)) - 1.0;
+    x2 = 2.0 * (rand () / double (RAND_MAX)) - 1.0;
+    w = x1 * x1 + x2 * x2;
+  } while (w >= 1.0);
+
+  w = sqrt (-2.0 * log (w)/w);
+  const double y1 = x1 * w;
+  const double y2 = x2 * w;
+
+  return mean_ + y1 * sigma_;
+}
