@@ -14,14 +14,33 @@ double f(int x, int y);
 int main()
 {
   int x0, y0, x;
-  int n=3, ii, idx;
+  int n=384, ii, idx;
   int M = 2*n-1;
   int N = M*M;
-  double Rows[n][n]; double Cols[n][n];
-  double row[M][M]; double col[n][M];
-  fftw_complex Z, a;
+  double stackRq;
+  double **row, **col, **Rows, **Cols;
+  stackRq = ((2*n*n + M*M + n*M)*8.0)/1e3;
+  cout << "Requires " << stackRq << " kB in stack " << endl;
+  row = new double*[M]; col = new double*[n];
+  Rows = new double*[n]; Cols = new double*[n];
+  for (int i=0;i<M;i++)
+    {
+      row[i] = new double[M];
+    }
+  for (int i=0;i<n;i++)
+    {
+      Rows[i] = new double[n];
+      Cols[i] = new double[n];
+      col[i] = new double[M];
+    }
+	     
+  // double Rows[n][n]; double Cols[n][n];
+  // double row[M][M];
+  // double col[n][M];
+ 
+  fftw_complex Z;//, a;
+  double a;
   double map_[n][n];
-				
   // FOR FFT
   fftw_plan p;
   fftw_complex *G, *Gamma, *GammaZ, *F;
@@ -88,6 +107,7 @@ int main()
       for (int j=0;j<M;j++)
   	{
 	  idx = j + RIdx*M;
+	  //idx = RIdx + j*M;
 
 	  G[idx] = row[RIdx][j]/N;
 	  // ONE VERIFIES THAT G IS (2*n-1)*(2*n-1) long. OK.
@@ -113,14 +133,16 @@ int main()
   
   // COMPUTE DOT PRODUCT BETWENN SQRT(GAMMA)
   // AND GAUSSIAN IMAGINARY RAND. VECTOR Z.
-  
+  ii=0;
   for(int i=0;i<N;i++)
     {
-      a = csqrt(Gamma[i]);
+      //a = csqrt(Gamma[i]);
+      //cout << creal(Gamma[i]) << endl;
+      a = creal(Gamma[i]);
+      if(a<0){a=0.0;}
       Z = randNormal(0,1) + randNormal(0,1)*I;
-      GammaZ[i] = a*Z;
+      GammaZ[i] = sqrt(a)*Z;
     }
-
 
   //CLEAR GAMMA, ALLOCATE F AND DO FFT TO GET F
   fftw_free(Gamma);
@@ -134,7 +156,8 @@ int main()
     {
       for (int j=0;j<n;j++)
 	{
-	  idx = j+n*i;
+	  idx = j+M*i;
+	  //idx = i + n*j;
 	  map_[i][j] = creal(F[idx]);
 	}
     }
@@ -145,8 +168,7 @@ int main()
     {
       for(int j=0;j<n;j++)
 	{
-	  idx = j+n*i;
-	  result << map_[i][j] << " ";
+	  result << map_[j][i] << " ";
 	}
       result << endl;
     }
@@ -165,6 +187,12 @@ double f(int x, int y)
 
   e = exp(-a-c);
   return (1.0-a-b-c)*e;
+
+  // double d, a;
+  // double sigma = 5.0;
+  // d = x*x + y*y;
+  // a = exp(-d/(2*sigma*sigma));
+  // return a;
 	  
 
 }
