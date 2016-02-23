@@ -22,10 +22,8 @@ void take_curl(int n, double* psi, double* curlx, double* curly, int &error)
     {
       //WEST BOUNDARY
       diffx = - psi[idx(2,y)]+4.0*psi[idx(1,y)]-3.0*psi[idx(0,y)];
-      //diffx = psi[idx(1,y)] - psi[idx(0,y)];
       diffy = psi[idx(0,y+1)] - psi[idx(0,y-1)];
       curly[idx(0,y)] = -(diffx/2.0);
-      //curly[idx(0,y)] =  - diffx;
       curlx[idx(0,y)] = diffy/2.0;
       //EAST BOUNDARY
       diffx = 3.0*psi[idx(n-1,y)]-4.0*psi[idx(n-2,y)]+psi[idx(n-3,y)];
